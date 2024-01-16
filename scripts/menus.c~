@@ -1,0 +1,128 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <graph.h>
+#include "jeu.h"
+#include "cartes.h"
+
+/*Ce qui affiche le menu et gère les clics du menu.
+Attention: pas terminé (il faut trouver des images pour avoir un beau menu)*/
+int menu(void){
+  int sourisX, sourisY;
+  ChargerImage("../pack_de_texture/fond/plateau.png",100,50,0,0,200,100);
+  EcrireTexte(800,373,"Choisissez votre grille",2);
+  ChargerImage("../pack_de_texture/fond/plateau.png",300,473,0,0,307,307);
+  ChargerImage("../pack_de_texture/fond/plateau.png",807,473,0,0,307,307);
+  ChargerImage("../pack_de_texture/fond/plateau.png",1314,473,0,0,307,307);
+  while (1){
+    if (SourisCliquee()==1){
+      sourisX=_X;
+      sourisY=_Y;
+      if ((sourisX>=300)&&(sourisX<=607)&&(sourisY>=473)&&(sourisY<=780)){
+    return 1;
+      }
+      if ((sourisX>=807)&&(sourisX<=1114)&&(sourisY>=473)&&(sourisY<=780)){
+    return 2;
+      }
+      if ((sourisX>=1314)&&(sourisX<=1621)&&(sourisY>=473)&&(sourisY<=780)){
+    return 3;
+      }
+    }
+  }
+}
+
+void pause(int reprendre){
+  int ecran=0;
+  if (reprendre==1){
+    ChargerImage("../pack_de_texture/fond/plateau.png",710,265,0,0,500,100);
+  }
+  ChargerImage("../pack_de_texture/fond/plateau.png",710,415,0,0,500,100);
+  ChargerImage("../pack_de_texture/fond/plateau.png",710,565,0,0,500,100);
+  ChargerImage("../pack_de_texture/fond/plateau.png",710,715,0,0,500,100);
+  while (ecran==0){
+    SourisPosition();
+    if ((_X<=1210) && (_X>=710)){
+      if ((_Y>=265) && (_Y<=365) && (reprendre=1)){
+	if (SourisCliquee()){
+	  //code
+	}
+      }
+      if ((_Y>=415) && (_Y<=515)){
+	if (SourisCliquee()){
+	  //code
+	}
+      }
+      if ((_Y>=565) && (_Y<=665)){
+	if (SourisCliquee()){
+	  //code
+	}
+      }
+      if ((_Y>=715) && (_Y<=815)){
+	if (SourisCliquee()==1){
+	  printf("menu");
+	  menu();
+	}
+      }
+    }
+  }
+}
+
+/*Fonction qui gère tout le temps de jeu : temps, affichage des cartes, clic,...
+Idéalement, il serait bien de la décomposer
+Attention: fonction pas terminé*/
+void jeu(struct carteTable* cartes, int nbColones, int nbLignes, int tCarteX, int tCarteY, int margeX, int margeY, int largeur, int hauteur){
+  int ecran =0, tour=1, cartesTrouve = 0, retournement=0, temps=-1, triche=0, numCarte1=-1, numCarte2=-1, numClic=-1, sourisX, sourisY, nbCartes=nbColones*nbLignes;
+  long int tempsRetourne = 1000000L;
+  long int dateRetournement = 0;
+  long int instantDebut=0;
+  long int dureePartie=0;
+  ChargerImage("../pack_de_texture/fond/plateau.png",0,0,0,0,largeur,hauteur);
+  retourneCartes(cartes, nbColones*nbLignes, 1, tCarteX, tCarteY, numCarte1, numCarte2);
+  while (ecran==0){
+    calculTemps(&dureePartie, &instantDebut, temps);
+    calculTriche(&triche, cartes, nbColones*nbLignes, tCarteX, tCarteY, numCarte1, numCarte2, &temps);
+    if ((retournement==1)&&(dateRetournement<dureePartie)){
+      retournement = retourneCartes(cartes, nbColones*nbLignes, 2, tCarteX, tCarteY, numCarte1, numCarte2);
+    }
+    if (SourisCliquee()==1){
+      sourisX = _X;
+      sourisY = _Y;
+      numClic = carteCliquee(sourisX, sourisY, largeur/2, hauteur/2, margeX, margeY, nbColones, nbLignes, tCarteX, tCarteY);
+      if (numClic>-1 && cartes[numClic].etat!=2){
+	if (triche==0){
+	  temps = 1;
+	  if (tour==1){
+	    if (retournement==1){
+	      retournement = retourneCartes(cartes, nbColones*nbLignes, 2, tCarteX, tCarteY, numCarte1, numCarte2);
+	    }
+	    numCarte1 = numClic;
+	    cartes[numCarte1].etat=1;
+	    ChargerImage(cartes[numCarte1].chemin, cartes[numCarte1].x+7, cartes[numCarte1].y+7, 0, 0, tCarteX, tCarteY);
+	    tour=2;
+	  }
+	  if ((tour==2) && (numClic!=numCarte1)){
+	    tour=1;
+	    numCarte2 = numClic;
+	    cartes[numCarte2].etat=1;
+	    ChargerImage(cartes[numCarte2].chemin, cartes[numCarte2].x+7, cartes[numCarte2].y+7, 0, 0, tCarteX, tCarteY);
+	    if (cartes[numCarte1].id==cartes[numCarte2].id){
+	      cartes[numCarte1].etat = 2;
+	      cartes[numCarte2].etat = 2;
+	      cartesTrouve +=2;
+	      if (cartesTrouve==nbCartes){
+		ecran=1;
+	      }
+	    }
+	    else{
+	      retournement = 1;
+	      dateRetournement = dureePartie + tempsRetourne;
+	    }
+	  }
+	}
+      }
+      //si -2 : pause(1);
+    }
+  }
+  pause(0);
+  Touche();
+  FermerGraphique();
+}
